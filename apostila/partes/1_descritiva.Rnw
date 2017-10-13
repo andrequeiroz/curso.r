@@ -1,0 +1,455 @@
+\chapter{Análise Descritiva}
+
+Toda análise estatística deve-se iniciar a partir da análise descritiva dos dados, também chamada de análise exploratória. Essa importante etapa é o primeiro contato que o pesquisador tem com a base de dados\footnote{Nesse capítulo será utilizada uma base de dados de uma pesquisa de opinião fictícia.}.
+
+<<set-base, include = FALSE>>=
+gerar_base <- function(n) {
+
+    id <- 1:n
+    sexo <- sample(c("Masculino", "Feminino"), size = n, replace = TRUE)
+    vinculo <- sample(c("Servidor", "Estagiário", "Terceirizado"), size = n,
+                      replace = TRUE, prob = c(0.68, 0.12, 0.20))
+    idade <- rpois(n, 35)
+
+    for (i in 1:n) {
+        if (vinculo[i] == "Estagiário") {
+            idade[i] <- sample(18:23, size = 1)
+        }
+    }
+
+    instalacoes <- sample(c("Ótimo", "Bom", "Regular", "Ruim"), size = n,
+                          replace = TRUE, prob = c(0.50, 0.35, 0.10, 0.05))
+    estacionamento <- sample(c("Ótimo", "Bom", "Regular", "Ruim"), size = n,
+                             replace = TRUE, prob = c(0.05, 0.40, 0.40, 0.15))
+    ambiente <- sample(c("Ótimo", "Bom", "Regular", "Ruim"), size = n,
+                       replace = TRUE, prob = c(0.75, 0.20, 0.04, 0.01))
+
+    for (i in 1:n) {
+        if (vinculo[i] == "Servidor") {
+            ambiente[i] <- sample(c("Ótimo", "Bom", "Regular", "Ruim"),
+                                  size = 1, replace = TRUE,
+                                  prob = c(0.20, 0.60, 0.15, 0.05))
+        }
+    }
+
+    base <- data.frame(id = id, sexo = sexo, idade = idade, vinculo = vinculo,
+                       estacionamento = estacionamento,
+                       instalacoes = instalacoes, ambiente = ambiente)
+
+    ##write.table(x = base, file = "../../arquivos/aula_1/base.txt",
+    ##            quote = FALSE, sep = "\t", row.names = FALSE)
+
+    base <- data.frame(id = id, sexo = sexo, idade = idade, vinculo = vinculo,
+                       estacionamento = estacionamento,
+                       instalacoes = instalacoes, ambiente = ambiente)
+
+    ##xlsx::write.xlsx(x = base, file = "../../arquivos/aula_1/base.xlsx",
+    ##                 sheetName = "dados", row.names = FALSE)
+}
+
+gerar_base(384)
+dados <- read.table("../../arquivos/aula_1/base.txt", header = TRUE, sep = "\t")
+@
+
+\section{Leitura dos dados no R}
+
+O R é uma linguagem de programação multipropósito focada na análise de dados. Todavia, entre as suas muitas funções não está o gerenciamento de dados em si. Ou seja, o fluxo de trabalho com o R sempre começa com a leitura dos dados a partir de uma fonte externa. Por isso mesmo, o R é capaz de ler arquivos de dados em inúmeros formatos. Desde os mais comuns como \textit{.txt} ou \textit{.xlsx} até os mais específicos como, por exemplo, \textit{.sav} e \textit{.dta} (arquivos dos \textit{softwares} estatísticos SPSS e Stata, respectivamente).
+
+\subsection{Dados em arquivos de texto}
+
+O arquivo mais comum para armazenar dados para trabalhar no R é o formato de texto (\textit{.txt}). Esse tipo de arquivo pode ser lido no R através da função \verb=read.table()=.
+
+<<c-1-1-1, eval = FALSE>>=
+dados <- read.table(file = "base.txt", header = TRUE)
+@
+
+A função \verb=read.table()= possui muitas ``opções'', formalmente chamadas de argumentos. Na chamada anterior aparecem dois deles: \verb=file=, o único argumento obrigatório da função, e \verb=header=. Os principais argumentos estão descritos na Tabela \ref{tab-read.table}.
+
+\begin{table}[h]
+  \centering
+  \caption{Principais argumentos da função \texttt{read.table()}.}
+  \begin{tabularx}{0.9\textwidth}{lX}
+    \hline
+    \rowcolor{black}
+    \textcolor{white}{Argumento} & \textcolor{white}{Descrição} \\
+    \hline
+    \texttt{file} & Nome do arquivo que contém os dados. \\
+    \texttt{header} & Indica se a primeira linha contém os nomes das variáveis. \\
+    \texttt{sep} & Símbolo que separa as colunas em variáveis distintas. \\
+    \texttt{dec} & Caractere que separa a parte decimal de um número. \\
+    \hline
+  \end{tabularx}
+  \label{tab-read.table}
+\end{table}
+
+O argumento \verb=sep=, apesar de omitido na chamada anterior, é muito importante e é prudente que esteja sempre explícito ao ler uma base de dados. O seu valor padrão é ``um espaço em branco''. Ou seja, a importação dos dados no R levará em conta que as variáveis no arquivo de texto estarão separadas por um espaço em branco. Isso pode ser um problema quando uma variável categórica tiver um rótulo composto por mais de uma palavra. Por exemplo, no nome de municípios ou de estados. A opção padrão do argumento \verb=sep= irá interpretar ``Distrito Federal'' como observações distintas, ``Distrito'' e ``Federal''. Para resolver esse problema, procure utilizar arquivos de texto separados por tabulações e importe esse dados no R utilizando o argumento \verb!sep = "\t"!.
+
+A função \verb=read.table()= apenas lê o arquivo de texto que contém a base de dados e ``imprime'' o resultado na tela do computador. Para realmente alocar o objeto na mémoria para que o R possa trabalhar com a base carregada é preciso utilizar o operador \verb=<-=. Esse operador, que lembra o formato de uma seta à esquerda, salva o resultado da execução de um comando no R num objeto que se tornará disponível para utilização futura. Para consultar os objetos salvos na memória utilize a função \verb=objects()=.
+
+<<c-1-1-2, eval = FALSE>>=
+dados <- read.table(file = "base.txt", header = TRUE, sep = "\t")
+@
+
+Uma função bastante útil é a \verb=file.choose()=. Ao adicionar essa função como a opção do argumento \verb=file= na chamada anterior, uma janela é aberta que permite selecionar o arquivo de texto desejado navegando pelas pastas do computador.
+
+Arquivos separados por vírgulas (\textit{.csv}) podem ser lidos no R mudando apenas o valor de \verb=sep=. Faça \verb!sep = ","! ou \verb!sep = ";"!, dependendo se o arquivo é separado por vírgulas ou pontos e vírgulas, respectivamente.
+
+Para saber a lista completa dos argumentos possíveis e uma descrição detalhada sobre a função \verb=read.table()=, digite no R o nome da função precedido por um ponto de interrogação.
+
+<<c-1-1-3, eval = FALSE>>=
+?read.table
+@
+
+Esse último comando apresentado pode ser usado em qualquer função do R.
+
+\subsection{Dados em arquivos do Excel}
+
+O R não lê nativamente arquivos \textit{.xls} e \textit{.xlsx}, mas isso absolutamente não significa que o R não trabalhe com esses tipos de arquivos. Apesar dos arquivos do Excel serem uma forma muito comum de armazenar dados, eles fazem parte de um pacote maior de \textit{softwares} proprietários. Provavelmente por isso os desenvolvedores do R não dão suporte direto a esse formato.
+
+Para ler arquivos \textit{.xls} e \textit{.xlsx} no R é necessário utilizar algum pacote\footnote{Um pacote, ou uma biblioteca de funções, são programas desenvolvidos em R e disponibilizados por seus autores. Em geral gratuitos, os pacotes podem ser baixados através de repositórios na internet. O mais famoso repositório de R pode ser acessado através do endereço \href{https://cran.r-project.org/}{https://cran.r-project.org/}.} adicional que cumpra essa finalidade. Existem alguns pacotes que tornam o R capaz de importar arquivos do Excel. Nos exemplos que seguem, será utilizada a biblioteca \href{https://cran.r-project.org/web/packages/xlsx/index.html}{\texttt{xlsx}}.
+
+Num computador com acesso à internet, para instalar um pacote adicional no R deve ser utilizada a função \verb=install.packages()=.
+
+<<c-1-1-4, eval = FALSE>>=
+install.packages(pkgs = "xlsx")
+@
+
+Uma vez instalado, o pacote pode ser carregado no R através da função \verb=library()=.
+
+<<c-1-1-5, eval = FALSE>>=
+library(package = xlsx)
+@
+
+Depois de carregada com sucesso, a biblioteca disponibiliza a função \verb=read.xlsx()=. Essa função permite ler tanto os arquivos \textit{.xls} quanto os arquivos \textit{.xlsx}.
+
+<<c-1-1-6, eval = FALSE>>=
+dados <- read.xlsx(file = "base.xlsx", sheetIndex = 1)
+@
+
+A chamada anterior apresenta a função \verb=read.xlsx()= com seus dois argumentos obrigatórios: \verb=file= e \verb=sheetIndex=. A Tabela \ref{tab-read.xlsx} descreve esses e alguns outros argumentos que podem ser úteis dessa função.
+
+\begin{table}[h]
+  \centering
+  \caption{Principais argumentos da função \texttt{read.xlsx()}.}
+  \begin{tabularx}{0.9\textwidth}{lX}
+    \hline
+    \rowcolor{black}
+    \textcolor{white}{Argumento} & \textcolor{white}{Descrição} \\
+    \hline
+    \texttt{file} & Nome do arquivo que contém os dados. \\
+    \texttt{sheetIndex} & Número da posição da planilha a ser lida. \\
+    \texttt{sheetName} & Nome da planilha a ser lida. \\
+    \texttt{header} & Indica se a primeira linha contém os nomes das variáveis. \\
+    \texttt{colIndex} & Número das colunas a serem lidas. \\
+    \texttt{rowIndex} & Número das linhas a serem lidas. \\
+    \hline
+  \end{tabularx}
+  \label{tab-read.xlsx}
+\end{table}
+
+Ler arquivos do Excel no R pode ser um problema em algumas situações. Por exemplo, se o computador não tiver acesso a internet não será possível baixar essas bibliotecas adicionais. Em todo caso, uma base de dados num arquivo Excel pode sempre ser salva num arquivo de texto separado por tabulações e depois lida no R através da função \verb=read.table()=, como mostrado na seção anterior.
+
+\section{Descrição dos dados}
+
+Quando uma base de dados é lida no R, a primeira questão que surge é saber se o arquivo de dados foi carregado corretamente. Existem algumas funções que permitem avaliar isso. Inicialmente, a função \verb=head()= mostra as primeiras seis linhas da base.
+
+<<c-1-2-1>>=
+head(x = dados)
+@
+
+De maneira análoga, a função \verb=tail()= mostra as seis últimas linhas da base de dados.
+
+Outras duas funções importantes nessa etapa de avaliar o sucesso no carregamento da base são: \verb=summary()= e \verb=str()=. A primeira mostra, de forma resumida, uma descrição das observações em cada variável. A segunda descreve as classes atribuídas automaticamente pelo R às variáveis da base.
+
+<<c-1-2-2>>=
+summary(object = dados)
+@
+
+A função \verb=View()= abre uma janela de visualização dos dados semelhante a uma planilha somente leitura. Para editar a base de dados a partir dessa planilha utilize a função \verb=edit()= e lembre-se de salvar o resultado da edição num objeto no R através do operador \verb=<-=.
+
+<<c-1-2-3, eval = FALSE>>=
+View(x = dados)
+@
+
+\subsection{Acesso a variáveis da base}
+
+O objeto \verb=dados= é uma representação da base lida a partir da fonte externa (arquivo de texto ou Excel) no R. Todos os objetos no R pertencem a alguma classe. No caso, o objeto \verb=dados= é da classe \verb=data.frame=.
+
+<<c-1-2-4>>=
+class(x = dados)
+@
+
+O \verb=data.frame= é a estrutura básica de armazenamento de dados presente no R. Uma maneira de acessar as variáveis dentro do \verb=data.frame= é por meio do operador \verb=$=.
+
+<<c-1-2-5>>=
+dados$idade
+@
+
+Outra forma de acessar os dados é através da notação matricial.
+
+<<c-1-2-5a>>=
+dados[1, 4]
+@
+
+O primeiro valor se refere à posição na linha e o segundo na coluna. No exemplo, é acessado o valor na primeira linha da quarta coluna. Se um valor for omitido serão impressos na tela todos os dados da dimensão ``em branco''.
+
+<<c-1-2-5b, eval = FALSE>>=
+dados[, "idade"]
+@
+
+No exemplo, a coluna desejada foi expressa pelo nome da variável\footnote{Para ter acesso aos nomes das variáveis no \texttt{data.frame}, utilize a função \texttt{names()}.}. A notação matricial é bastante útil em recursos intermediários e avançados do R. As funções \verb=with()= e \verb=attach()= também acessam\footnote{Para mais detalhes, acesse a documentação dessas funções através do operador \texttt{?}.} variáveis em um \verb=data.frame=.
+
+A base de dados possui algumas variáveis categóricas ordinais. Porém, quando a leitura dos dados é feita, o R ordena as categorias alfabeticamente. A função \verb=factor()= corrige isso recodificando e sobrescrevendo a variável lida com a informação ordinal da categoria.
+
+<<c-1-2-6>>=
+dados$ambiente <- factor(x = dados$ambiente,
+                         levels = c("Ruim", "Regular", "Bom", "Ótimo"),
+                         ordered = TRUE)
+@
+
+<<c-1-2-7, include = FALSE>>=
+dados$estacionamento <- factor(x = dados$estacionamento,
+                               levels = c("Ruim", "Regular", "Bom", "Ótimo"),
+                               ordered = TRUE)
+dados$instalacoes <- factor(x = dados$instalacoes,
+                            levels = c("Ruim", "Regular", "Bom", "Ótimo"),
+                            ordered = TRUE)
+@
+
+\subsection{Criação de variáveis}
+
+A função \verb=transform()= permite que sejam criadas novas variáveis na base de dados carregada no R. Por exemplo, suponha que as variáveis categóricas \verb=ambiente=, \verb=estacionamento= e \verb=instalacoes= sejam recodificadas numa escala numérica e uma nova variável, denominada índice de satisfação individual, seja a média aritmética dessas três variáveis.
+
+<<c-1-2-8>>=
+dados <- transform("_data" = dados,
+                   isi = (as.numeric(ambiente) + as.numeric(estacionamento) +
+                          as.numeric(instalacoes)) / 3)
+@
+
+A função \verb=as.numeric()= recodifica uma variável categórica ordinal de acordo com a ordem dos seus fatores. No caso, ``Ruim'' passa a ser 1, ``Regular'' assume o valor 2, e ``Bom'' e ``Ótimo'' recebem os valores 3 e 4, respectivamente.
+
+\subsection{Medidas descritivas}
+
+O R possui diversas funções que calculam medidas descritivas como a média, mediana, variância, desvio padrão\footnote{O R calcula a variância e o desvio padrão amostrais.} e soma.
+
+<<c-1-2-9>>=
+mean(x = dados$idade)
+median(x = dados$idade)
+var(x = dados$idade)
+sd(x = dados$idade)
+sum(x = dados$idade)
+length(x = dados$idade)
+@
+
+A função \verb=fivenum()= retorna as cinco medidas resumo de Tukey. São elas: mínimo, corte de 25\%, mediana, corte de 75\% e máximo.
+
+<<c-1-2-10>>=
+fivenum(x = dados$idade)
+@
+
+A função \verb=table()= mostra a contagem das observações da variável em forma de tabulação.
+
+<<c-1-2-11>>=
+table(vinculo = dados$vinculo)
+table(vinculo = dados$vinculo, ambiente = dados$ambiente)
+@
+
+É possível também calcular a tabulação das distribuições proporcionais das variáveis através da função \verb=prop.table()=. Essa função possui o argumento opcional \verb=margin= que permite calcular as distribuições proporcionais com relação às linhas ou às colunas.
+
+<<c-1-2-11a>>=
+prop.table(table(vinculo = dados$vinculo, ambiente = dados$ambiente))
+@
+
+A função \verb=aggregate()= permite calcular medidas a partir de partições personalizadas da população. Por exemplo, através dessa função é possível calcular a média do recém criado índice de satisfação individual de acordo com o vínculo do respondente com a instituição.
+
+<<c-1-2-12>>=
+aggregate(x = list(isi = dados$isi),
+          by = list(vinculo = dados$vinculo), FUN = mean)
+@
+
+Ou ainda, numa segunda etapa é possível particionar o cálculo da média do índice através de mais de uma variável.
+
+<<c-1-2-13>>=
+aggregate(x = list(isi = dados$isi),
+          by = list(vinculo = dados$vinculo, sexo = dados$sexo),
+          FUN = mean)
+@
+
+\subsection{Particionamento da base de dados}
+
+Em alguma análise, pode ser o interesse separar definitivamente a base de dados em partições específicas. Por exemplo, deseja-se tratar separadamente as pessoas que responderam que as condições de estacionamento na instituição são ruins. A função \verb=subset()= é utilizada nessa situação.
+
+<<c-1-2-14>>=
+dados.est.ruim <- subset(x = dados, subset = estacionamento == "Ruim")
+summary(object = dados.est.ruim)
+@
+
+O resultado da função \verb=subset()= é um novo \verb=data.frame= que pode ser utilizado exatamente como a base originalmente lida.
+
+As proposições podem ser agrupadas através dos operadores lógicos ``E'' (\&) e ``OU'' (|). O operador lógico de negação (!) também pode ser utilizado para particionar a base de dados em subgrupos mais específicos.
+
+<<c-1-2-14a, eval = FALSE>>=
+subset(x = dados, subset = estacionamento != "Ótimo" & idade > 40)
+@
+
+Na chamada anterior, por exemplo, é extraído um particionamento da base com os indivíduos que têm a opinião sobre o estacionamento diferente de ótimo e com idade acima de 40 anos.
+
+\section{Gráficos}
+
+A visualização de dados através de gráficos é um dos pontos fortes do R. O programa possui pacotes que permitem criar gráficos altamente customizáveis e limitados apenas pela imaginação do estatístico. Nessa seção serão apresentados os principais gráficos que podem ser feitos através do pacote \verb=graphics=, a biblioteca básica para criar gráficos no R.
+
+\subsection{Gráfico de dispersão}
+
+Os gráficos de dispersão são representações de variáveis num plano cartesiano. No R, um gráfico desse tipo é gerado com a função \verb=plot()=.
+
+<<c-1-3-1>>=
+plot(formula = isi ~ idade, data = dados)
+@
+
+A função \verb=plot()= possui um número enorme de argumentos que servem para personalizar o gráfico.
+
+<<c-1-3-2>>=
+plot(formula = isi ~ idade, data = dados, pch = 20, col = "blue",
+     xlab = "Idade", ylab = "Índice de Satisfação")
+@
+
+Os argumentos \verb=pch= e \verb=col= alteram a forma\footnote{As opções disponíveis podem ser acessadas na documentação da função \texttt{points()}.} e a cor\footnote{A lista das cores programadas em R pode ser acessada pela função \texttt{colors()}.} dos pontos. Os argumentos \verb=xlab= e \verb=ylab= renomeiam os eixos x e y, respectivamente. A Tabela \ref{tab-par} mostra alguns argumentos que customizam os gráficos do pacote \verb=graphics=. Para a lista completa dos argumentos e a descrição de como cada um funciona, basta acessar a ajuda da função \verb=par()=.
+
+<<c-1-3-3, eval = FALSE>>=
+?par
+@
+
+\begin{table}[h]
+  \centering
+  \caption{Alguns argumentos de personalização do pacote \texttt{graphics}.}
+  \begin{tabularx}{0.9\textwidth}{lX}
+    \hline
+    \rowcolor{black}
+    \textcolor{white}{Argumento} & \textcolor{white}{Descrição} \\
+    \hline
+    \texttt{bty} & Caractere que determina o tipo de caixa ao redor do gráfico. \\
+    \texttt{cex} & Valor que determina um aumento nos textos. \\
+    \texttt{col} & Cor dos pontos. \\
+    \texttt{lty} & Tipo da linha, quando houver. \\
+    \texttt{lwd} & Espessura da linha, quando houver. \\
+    \texttt{main} & Título do gráfico. \\
+    \texttt{mar} & Largura das margens. \\
+    \texttt{pch} & Formato dos pontos. \\
+    \texttt{xlab} & Rótulo do eixo x. \\
+    \texttt{ylab} & Rótulo do eixo y. \\
+    \hline
+  \end{tabularx}
+  \label{tab-par}
+\end{table}
+
+\subsection{Gráfico de barras}
+
+Os gráficos de barras (ou colunas) são muito comuns e utilizados para representar frequências ou estatísticas de variáveis categóricas. Eles podem ser produzidos no R a partir da função \verb=barplot()=.
+
+<<c-1-3-4>>=
+barplot(height = table(dados$vinculo))
+@
+
+A função \verb=barplot()= requer que os dados estejam tabulados. Portanto, a função \verb=table()= pode ser usada diretamente no argumento \verb=height= da função \verb=barplot()= para tabular os dados e passar essa informação automaticamente no momento da criação do gráfico. Os gráficos de barra também podem ser personalizados. Alguns argumentos úteis da função \verb=barplot()= estão na Tabela \ref{tab-barplot}.
+
+\begin{table}[h]
+  \centering
+  \caption{Alguns argumentos da função \texttt{barplot()}.}
+  \begin{tabularx}{0.9\textwidth}{lX}
+    \hline
+    \rowcolor{black}
+    \textcolor{white}{Argumento} & \textcolor{white}{Descrição} \\
+    \hline
+    \texttt{height} & Medidas das categorias. \\
+    \texttt{space} & Espaço ao lado esquerdo antes de cada barra. \\
+    \texttt{beside} & Indica se as barras devem ser lado a lado. \\
+    \texttt{horiz} & Indica se as barras devem estar na horizontal. \\
+    \texttt{legend} & Indica se a legenda deve ser incluída. \\
+    \texttt{col} & Cor de preenchimento. \\
+    \texttt{density} & Densidade de preenchimento. \\
+    \texttt{border} & Cor das bordas. \\
+    \hline
+  \end{tabularx}
+  \label{tab-barplot}
+\end{table}
+
+<<c-1-3-5>>=
+barplot(height = table(dados$ambiente, dados$vinculo), legend = TRUE,
+        beside = TRUE, main = "Opinião: Ambiente de trabalho")
+@
+
+\subsection{Gráfico de pizza}
+
+Os gráficos de pizza podem ser feitos no R através da função \verb=pie()=.
+
+<<c-1-3-6>>=
+pie(x = table(dados$vinculo))
+@
+
+Não existem muitas opções para esse tipo de gráfico, além de mudança das cores e alterações nas especificações de rotação.
+
+\subsection{Histograma}
+
+Os histogramas mostram a densidade (ou distribuição de frequência) de uma variável númerica. Eles são criados no R pelo pacote \verb=graphics= com a função \verb=hist()=.
+
+<<c-1-3-7>>=
+hist(x = dados$idade)
+@
+
+Por padrão, o histograma é construído a partir da distribuição de frequências da variável. A mudança dessa característica é feita pelo argumento \verb=freq=. Esse e outros argumentos úteis podem ser vistos na Tabela \ref{tab-hist}.
+
+\begin{table}[h]
+  \centering
+  \caption{Alguns argumentos da função \texttt{hist()}.}
+  \begin{tabularx}{0.9\textwidth}{lX}
+    \hline
+    \rowcolor{black}
+    \textcolor{white}{Argumento} & \textcolor{white}{Descrição} \\
+    \hline
+    \texttt{breaks} & Número de quebras. \\
+    \texttt{freq} & Indica se o histograma deve ser feito a partir da distribuição de frequências. \\
+    \texttt{col} & Cor de preenchimento. \\
+    \texttt{density} & Densidade de preenchimento. \\
+    \texttt{border} & Cor da borda. \\
+    \texttt{main} & Título do gráfico. \\
+    \texttt{xlab} & Rótulo do eixo x. \\
+    \texttt{ylab} & Rótulo do eixo y. \\
+    \hline
+  \end{tabularx}
+  \label{tab-hist}
+\end{table}
+
+<<c-1-3-8>>=
+hist(x = dados$idade, freq = FALSE, col = "lightblue",
+     main = "", xlab = "Idade")
+@
+
+\section{Exercícios}
+
+\begin{enumerate}
+
+  \item Leia o arquivo \verb=base-ex.txt= no R e salve num objeto chamado \verb=dados.texto=.
+
+  \item Leia o arquivo \verb=base-ex.csv= no R e salve num objeto chamado \verb=dados.csv=. \textit{Dica: abra o arquivo antes no bloco de notas para saber qual o caractere de separação das variáveis.}
+
+  \item Verifique se o número de observações nos dois objetos salvos nos exercícios anteriores é o mesmo. \textit{Dica: a função} \verb=nrow()= \textit{mostra a quantidade de linhas de um} \verb=data.frame=\textit{.}
+
+  \item Gere o resumo de todas as variáveis do objeto \verb=dados.texto=.
+
+  \item Calcule a média, mediana e desvio padrão do variável \verb=idade= do objeto \verb=dados.texto=.
+
+  \item Gere a tabulação conjunta (em valores proporcionais) das variáveis \verb=vinculo= e \verb=ambiente=.
+
+  \item Calcule (na escala de 0 a 1) o índice de satisfação individual, que é a média aritmética das variáveis \verb=estacionamento=, \verb=instalacoes= e \verb=ambiente=.
+
+  \item Calcule a média do índice de satisfação segundo a variável \verb=vinculo=.
+
+  \item Gere um gráfico de barras com a distribuição de frequências da variável \verb=estacionamento=.
+
+  \item Gere um gráfico de barras com a distribuição de frequências da variável \verb=estacionamento= segundo as categorias da variável \verb=vinculo=.
+
+  \item Gere um histograma com a idade dos respondentes.
+
+  \item Gere um histograma com a idade dos estagiários.
+
+\end{enumerate}

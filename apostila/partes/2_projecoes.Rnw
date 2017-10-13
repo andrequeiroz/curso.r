@@ -1,0 +1,338 @@
+\chapter{Projeções}
+
+<<c-2, include = FALSE>>=
+library(forecast)
+dados <- read.table(file = "../../arquivos/aula_2/recebidos_tst.txt",
+                    header = TRUE, sep = "\t")
+@
+
+Um modelo estatístico muitas vezes é proposto para entender como um sistema se comporta, especialmente para determinar a relação entre as variáveis de interesse. Entretanto, a função mais importante num modelo de séries temporais tem que ser a sua capacidade de fazer predições com a menor incerteza possível.
+
+Existem pelo menos três fatores que podem afetar a predição feita sobre um valor. O primeiro deles é o quanto se sabe sobre o sistema estudado. Evidentemente que quanto maior for o conhecimento sobre o objeto de estudo e quão eficiente for o estatístico na maneira de refletir esse conhecimento na proposição do modelo, mais precisas serão as previsões estimadas. Outro fator é a disponibilidade dos dados em si. E por fim, a própria estimativa pode afetar a realização dos dados através de uma política de prevenção ou superação de expectativas.
+
+É possível fazer projeções sobre qualquer sistema, mesmo sem nenhum dado disponível. Todavia, serão abordados nesse texto métodos quantitativos de estimação, que partem do princípio que seja razoável supor que os padrões observados no passado, persistirão no futuro. Serão feitas projeções sobre a série de processos recebidos no Tribunal Superior do Trabalho. A biblioteca de funções \href{https://cran.r-project.org/web/packages/forecast/index.html}{\texttt{forecast}} do R será utilizada para o cálculo das estimativas.
+
+<<c-2-0, eval = FALSE>>=
+library(forecast)
+@ 
+
+\section{Metodologia}
+
+As primeiras etapas num estudo dessa natureza é definir bem o problema e coletar os dados disponíveis. No caso, serão feitas algumas projeções sobre a série de processos recebidos no TST de janeiro de 2004 a dezembro de 2015. Para efeitos de simplificação, serão desconsideradas quaisquer outras covariáveis que possam claramente afetar essa série de dados, como os processos recebidos e julgados em 1º e 2º graus. Também será desconsiderada a conjuntura econômica do País no período. Os dados foram coletados a partir das séries disponibilizadas pela Seção de Acompanhamento Estatístico do TST.
+
+Após essas etapas iniciais deve ser feita uma análise descritiva da série em busca de basicamente três características: tendência, sazonalidade e ciclos, para enfim seguir em frente na escolha e estimação do modelo. Um vez feito isso, o modelo deve ser utilizado para estimar as projeções desejadas. A última etapa é avaliar o modelo utilizado a partir da própria realização dos dados. Essa etapa será deixada de lado nesse contexto, porém trata-se de um passo muito importante que o estatístico deve ter sempre em mente.
+
+\section{Análise descritiva}
+
+Os dados podem ser lidos no R através da função \verb=read.table()=.
+
+<<c-2-1, eval = FALSE>>=
+dados <- read.table(file = file.choose(), header = TRUE, sep = "\t")
+@
+
+Uma janela é aberta que deve ser utilizada para selecionar o arquivo \verb=recebidos-tst.txt=. O arquivo é lido e os dados são salvos num objeto da classe \verb=data.frame=.
+
+<<c-2-2>>=
+class(dados)
+head(dados)
+@
+
+Existem na base três colunas: \verb=ano=, \verb=mes= e \verb=recebidos=. Como os dados pertencem a uma série temporal, pode-se criar um objeto da classe \verb=ts=\footnote{A classe \texttt{ts} (do inglês, \textit{time series}) define objetos do tipo séries temporais.} com a finalidade de facilitar o fluxo de trabalho.
+
+<<c-2-3>>=
+recebidos.mes <- ts(data = dados$recebidos, start = 2004, frequency = 12)
+@
+
+A função \verb=ts()= transforma uma série de dados regulares numa série de dados temporais. O argumento \verb=start= determina o ano de início e o argumento \verb=frequency= define quantas observações existem por ano. O R agora entende que os dados pertencem a uma série de tempo.
+
+<<c-2-4>>=
+plot(recebidos.mes, bty = "n", xaxp = c(2004, 2016, 12), xlab = "",
+     ylab = "", main = "Processos recebidos mensalmente no TST")
+@
+
+A série de processos recebidos por ano pode ser calculada através da aplicação da função \verb=aggregate()= na série mensal. A função \verb=ts()= transforma o resultado do passo anterior num objeto da classe de séries temporais.
+
+<<c-2-5>>=
+dados.ano <- aggregate(x = list(recebidos = dados$recebidos),
+                       by = list(ano = dados$ano), FUN = sum)
+recebidos.ano <- ts(dados.ano$recebidos, start = 2004, frequency = 1)
+@
+
+<<c-2-6>>=
+plot(recebidos.ano, bty = "n", xaxp = c(2004, 2016, 12), xlab = "",
+     ylab = "", main = "Processos recebidos anualmente no TST")
+@
+
+Os gráficos das duas séries permitem perceber uma tendência de crescimento aproximadamente linear na realização de dados. É fácil traçar mentalmente uma reta que ``guia'' a série de processos recebidos no TST.
+
+Um padrão sazonal é outra característica que deve ser identificada, ou não, no conjunto de dado. Um comportamento sazonal é facilmente confundido com um ciclo. Enquanto o primeiro é explicitamente governado por um padrão temporal periódico, o segundo ocorre sem obedecer uma passagem de tempo bem definida.
+
+A série de dados anuais não aparenta ter um comportamento sazonal. Por sua vez, o gráfico da série mensal sugere que possa existir um padrão periódico bem definido. O diagrama de caixas (\textit{boxplot}) mostra uma redução na quantidade de processos recebidos nos meses de janeiro, julho e dezembro, indicando assim uma possível sazonalidade.
+
+<<c-2-7>>=
+ordem <- order(order(aggregate(list(recebidos = dados$recebidos),
+           list(mes = dados$mes), mean)$recebidos, decreasing = TRUE))
+cores <- heat.colors(12)[ordem]
+boxplot(recebidos ~ mes, data = dados, axes = FALSE, col = cores,
+        main = "Processos recebidos por mês no TST")
+axis(1, at = 1:12, labels = month.abb)
+axis(2)
+@ 
+
+Uma série temporal é autocorrelacionada quando as observações apresentam uma correlação linear com valores separados por um número fixo de observações anteriores. A função \verb=Acf()= calcula a função de autocorrelação e estima intervalos que determinam se o valor calculado é estatisticamente significativo ou não.
+
+<<c-2-7a>>=
+Acf(recebidos.mes, lag.max = 32, main = "Série mensal")
+@
+
+Como pode ser observado, existe uma autocorrelação bastante forte na série mensal. O que era esperado, uma vez que a série aparenta possuir um efeito sazonal.
+
+As observações da série anual, por sua vez, apresentam uma autocorrelação estatisticamente significativa apenas com a observação imediatamente anterior. Uma série temporal sem autocorrelação é chamada de ruído branco.
+
+<<c-2-7b>>=
+Acf(recebidos.ano, main = "Série anual")
+@
+
+Com base nessas análises, alguns modelos de predição podem ser propostos.
+
+\section{Modelo linear}
+
+O modelo linear define o comportamento de uma variável resposta de acordo com uma combinação linear de variáveis explicativas.
+
+\subsection{Modelo linear simples}
+
+O modelo linear simples leva em consideração apenas uma variável explicativa. Desse modo, é possível aplica-lo apenas aos dados anuais (uma vez que os dados mensais apresentam uma possível sazonalidade relacionada aos meses). O modelo linear foi implementado na biblioteca \verb=forecast= a partir da função \verb=tslm()=.
+
+<<c-2-8>>=
+modelo1 <- tslm(recebidos.ano ~ trend)
+@
+
+O argumento \verb=trend= na chamada anterior indica que deve ser estimado um modelo linear a partir de uma série temporal que apenas apresenta uma tendência constante de crescimento (ou decréscimo).
+
+As estimativas dos coeficientes foram estatisticamente significativas com 95\% de confiança, como pode ser observado no resumo do \verb=modelo1=.
+
+<<c-2-9>>=
+summary(modelo1)
+@
+
+Os coeficientes do modelo linear são de fácil interpretação. No caso, segundo o modelo, é esperado um aumento anual médio de \Sexpr{numero(coef(modelo1)[2])} processos recebidos ano a ano. O intercepto indica a quantidade de processos recebidos no ano zero, o que nesse contexto não faz sentido. Portanto é apenas uma entidade matemática sem interpretação com sentido prático.
+
+<<c-2-10>>=
+plot(recebidos.ano, bty = "n", xaxp = c(2004, 2016, 12), xlab = "",
+     ylab = "", main = "Processos recebidos anualmente no TST")
+lines(fitted(modelo1), col = "blue")
+@
+
+Para avaliar a adequação do modelo é necessário fazer uma análise dos resíduos\footnote{Resíduo é a diferença entre o valor observado e o valor ajustado pelo modelo.}. No R os resíduos de um modelo podem ser calculados pela função \verb=residuals()=.
+
+<<c-2-11>>=
+residuos <- residuals(modelo1)
+@
+
+Bons ajustes irão gerar resíduos não correlacionados e não viesados. Para efeitos de predição, é desejável que os resíduos tenham distribuição normal.
+
+<<c-2-12>>=
+plot(residuos)
+abline(h = 0, col = "red")
+@
+
+A série de resíduos se comporta aparentemente sem viés, conforme o desejado. O gráfico da função de autocorrelação mostra também que os resíduos não possuem alguma autocorrelação estatisticamente significativa.
+
+<<c-2-13>>=
+Acf(residuos, main = "")
+@
+
+Se os resíduos forem autocorrelacionados, significa que existem ainda variáveis influentes que foram deixadas de fora na modelagem\footnote{Experimente modelar os dados mensais com um modelo linear apenas com tendência.}.
+
+Por fim, quanto a normalidade, o gráfico de quantis da distribuição normal sugere que os resíduos podem ser normalmente distribuídos.
+
+<<c-2-14>>=
+qqnorm(residuos)
+qqline(residuos)
+@
+
+O teste de hipóteses de Shapiro-Wilk corrobora com a sugestão do gráfico de quantis. Esse teste parte da hipótese nula de normalidade e o seu resultado mostra que não há evidências estatísticas para se rejeitar essa hipótese sob o nível de 95\% de confiança\footnote{Há de se destacar que a massa de dados anuais talvez seja muito pequena para conduzir esse teste de hipóteses. No caso, deveria-se coletar os dados de processos recebidos em anos anteriores a 2004.}.
+
+<<c-2-15>>=
+shapiro.test(residuos)
+@
+
+Se os resíduos forem independentes e normalmente distribuídos será possível construir intervalos de predições confiáveis. A função \verb=forecast()= calcula as projeções desejadas. O argumento \verb=h= indica quantas projeções devem ser estimadas.
+
+<<c-2-16>>=
+projecoes <- forecast(modelo1, h = 2)
+projecoes
+@
+
+Essas são as projeções para os dois próximos anos de processos recebidos mensalmente no TST, sob o modelo linear simples. São também apresentados os intervalos de 80\% e 95\% de predição.
+
+<<c-2-17>>=
+plot(projecoes, bty = "n", xaxp = c(2004, 2018, 14), xlab = "",
+     ylab = "", main = "Processos recebidos anualmente no TST")
+lines(fitted(modelo1), col = "blue")
+@
+
+\subsection{Modelo linear múltiplo}
+
+Para modelar os dados mensais é preciso adicionar o efeito sazonal no modelo.
+
+<<c-2-18>>=
+modelo2 <- tslm(recebidos.mes ~ trend + season)
+@
+
+O novo argumento \verb=season= indica que a série apresenta sazonalidade, porém observe que nada foi informado sobre a frequência do efeito como mensal, trimestral ou semestral, por exemplo. O algoritmo de estimação do modelo implementado no R assume a frequência associada ao objeto criado pela função \verb=ts()=.
+
+O modelo foi ajustado e os detalhes podem ser observados através da função \verb=summary()=. O gráfico a seguir mostra o ajuste encontrado.
+
+<<c-2-19>>=
+plot(recebidos.mes, bty = "n", xaxp = c(2004, 2016, 12), xlab = "",
+     ylab = "", main = "Processos recebidos mensalmente no TST")
+lines(fitted(modelo2), col = "blue")
+@
+
+Como no caso anterior, a qualidade do ajuste deve ser avaliada através da análise dos resíduos.
+
+<<c-2-20>>=
+residuos <- residuals(modelo2)
+plot(residuos)
+abline(h = 0, col = "red")
+@
+
+No geral, os resíduos parecem distribuídos de forma aceitável ao redor da média. Exceto nos valores próximos de 2013 e 2014, quando parece existir uma elevação no nível da série de resíduos. O gráfico de quantis da distribuição normal sugere que a hipótese de normalidade não deva ser rejeita. Fato que é confirmado com o teste não paramétrico de Shapiro-Wilk.
+
+<<c-2-21>>=
+qqnorm(residuos)
+qqline(residuos)
+shapiro.test(residuos)
+@ 
+
+Dessa maneira as projeções podem ser feitas com os intervalos de predição consistentes, apesar de pouco precisos.
+
+<<c-2-22>>=
+projecoes <- forecast(modelo2, h = 6)
+projecoes
+@ 
+
+Essas são as projeções de processos recebidos mensalmente para o próximo semestre no TST, sob o modelo linear múltiplo. O gráfico a seguir ilustra essas estimativas.
+
+<<c-2-23>>=
+plot(projecoes, bty = "n", xaxp = c(2004, 2016, 12), xlab = "",
+     ylab = "", main = "Processos recebidos mensalmente no TST")
+lines(fitted(modelo2), col = "blue")
+@
+
+\section{Modelos de alisamento exponencial}
+
+Um modelo alternativo ao linear é o modelo de alisamento exponencial. Esse modelo foi proposto inicialmente em 1950. Ele produz projeções baseadas em médias ponderadas das observações passadas. Os pesos dessas observações vão ficando cada vez menores conforme os valores vão ficando mais no passado.
+
+\subsection{Modelo de Holt}
+
+O modelo de Holt leva em consideração uma série temporal apenas com tendência. No R ele é estimado pela função \verb=holt()=.
+
+<<c-2-hw-1>>=
+modelo3 <- holt(recebidos.ano, h = 2)
+modelo3
+@
+
+Foi utilizada a série de processos recebidos anualmente, pois, como visto anteriormente, a série mensal possui um efeito sazonal além da tendência. Observe que a função \verb=holt()= estima o modelo e produz imediatamente as estimativas. O gráfico mostra a série de dados com o respectivo resultado produzido pelo modelo.
+
+<<c-2-hw-2>>=
+plot(modelo3)
+lines(fitted(modelo3), col = "blue")
+@
+
+O modelo não requer pressuposto inicial e as estimativas pontuais serão boas sob qualquer distribuição de resíduos, porém a hipótese de normalidade dos resíduoes é necessária para o cálculo dos intervalos de predição. Todavia, isso é facilmente contornado no R utilizando os intervalos calculados via \textit{bootstrap}. Para fazer isso, basta acrescentar os parâmetros \verb=bootstrap= e \verb=simulate= com o valor verdadeiro na hora de chamar a função.
+
+<<c-2-hw-3>>=
+modelo4 <- holt(recebidos.ano, h = 2, bootstrap = TRUE, simulate = TRUE)
+modelo4
+@ 
+
+\subsection{Modelo de Holt-Winters}
+
+O modelo de Holt-Winters adiciona a sazonalidade no cálculo das projeções. Ele é estimado no R através da função \verb=hw()=.
+
+<<c-2-hw-4>>=
+modelo5 <- hw(recebidos.mes, h = 6, bootstrap = TRUE, simulate = TRUE)
+modelo5
+@
+
+Por apresentar tendência e efeito sazonal como observado em análises anteriores, dessa vez, foi utilizada a série de processos recebidos por mês. Os intervalos de predição foram calculados por métodos computacionais e o gráfico a seguir ilustra os resultados.
+
+<<c-2-hw-5>>=
+plot(modelo5)
+lines(fitted(modelo5), col = "blue")
+@
+
+O modelo de Holt-Winters possui uma variação em relação ao método de estimar as projeções. Por padrão, é feito um cálculo com efeitos sazonais aditivos. Esse método é preferível quando a variabilidade da série é constante no tempo. Se a variabilidade dos dados aumentar conforme o nível da série aumenta, deve-se utilizar um efeito multiplicativo no cálculo das estimativas. Isso é feito a partir do parâmetro \verb=seasonal=.
+
+Apesar de serem uma boa alternativa, sobretudo por não necessitarem de pressuposto inicial sobre a distribuição dos resíduos para o cálculo de intervalos de predição, os modelos de alisamento exponencial têm um problema com estimativas a longo prazo. Como o cálculo das projeções é baseado em médias ponderadas das observações anteriores, a longo prazo, as estimativas serão computadas sob projeções iniciais.
+
+\section{Modelos ARIMA}
+
+Existe uma classe de modelos de séries temporais baseada em relações de autocorrelações: os modelos autorregressivos, os modelos de médias moveis e a junção dos dois. Esse modelos funcionam apenas com séries estacionárias, isto é, sem tendência e sazonalidade. A fim de corrigir esse problema, surgem os modelos ARIMA. Eles, inicialmente, transformam a série de dados numa série estacionária e então aplicam as técnicas associadas a essas séries.
+
+Os modelos ARIMA possuem um conjunto grande de parâmetros que devem ser determinados um a um através de métodos indiretos como gráficos de diagnósticos, um processo extremamente trabalhoso. A biblioteca de funções \verb=forecast= ganhou notoriedade, pois o autor inovou com um algoritmo capaz de achar os parâmetros do modelo de forma bastante eficiente. A função \verb=auto.arima()= faz todo o trabalho pesado.
+
+<<c-2-arima-1>>=
+modelo6 <- auto.arima(recebidos.mes, seasonal = TRUE)
+@
+
+A função seleciona o melhor modelo, porém os resíduos devem ser avaliados para saber se a escolha foi conveniente.
+
+<<c-2-arima-2>>=
+residuos <- residuals(modelo6)
+plot(residuos)
+abline(h = 0, col = "red")
+@ 
+
+Os resíduos devem ser uma série de ruído branco.
+
+<<c-2-arima-3>>=
+Acf(residuos, main = "")
+@ 
+
+O gráfico anterior mostra que não há autocorrelação estatisticamente significativa nos resíduos. O teste de Ljung-Box testa a hipótese de ruído branco.
+
+<<c-2-arima-4>>=
+Box.test(residuos, type = "Ljung-Box")
+@ 
+
+Como pode ser observado, a hipótese nula de ruído branco não pode ser rejeitada. Dessa maneira, é possível calcular as projeções com base nesse modelo\footnote{Se a hipótese de ruído branco fosse rejeitada, o modelo deveria ser descartado.}.
+
+<<c-2-arima-5>>=
+projecoes <- forecast(modelo6, h = 6)
+projecoes
+@ 
+
+Essas são as projeções de processos recebidos nos próximos seis meses no TST. O gráfico mostra as estimativas junto com a série de observações.
+
+<<c-2-arima-6>>=
+plot(projecoes, bty = "n", xaxp = c(2004, 2016, 12), xlab = "",
+     ylab = "", main = "Processos recebidos mensalmente no TST")
+lines(fitted(modelo6), col = "blue")
+@ 
+
+\section{Exercícios}
+
+\begin{enumerate}
+  
+  \item Leia o arquivo de dados \verb=recebidos-trt.txt= no e R e salve no objeto \verb=dados=.
+    
+  \item Escolha um TRT do seu interesse e particione a base de dados num novo \verb=data.frame= chamado \verb=recebidos=. \textit{Dica: utilize a função} \texttt{subset()} \textit{.}
+    
+  \item Utilize a função \verb=ts()= para transformar a base \verb=recebidos= num objeto da classe \verb=ts= com o nome \verb=recebidos.mes=.
+    
+  \item Utilize a função \verb=aggregate()= para gerar a base de processos recebidos por ano no TRT e salve num objeto da classe \verb=ts= chamado de \verb=recebidos.ano=.
+    
+  \item Explore as bases de dados (\verb=recebidos.ano= e \verb=recebidos.mes=)e tente achar padrões como: tendência, sazonalidade e ciclos.
+    
+  \item Utilize um modelo de regressão linear (se possível) para projetar os três próximos anos na série anual e os 6 próximos meses na série mensal. Faça uma análise da consistência dos intervalos de predição a partir dos resíduos.
+    
+  \item Utilize um modelo de alisamento exponencial (se possível) para projetar os três próximos anos na série anual e os 6 próximos meses na série mensal. Faça uma análise da consistência dos intervalos de predição a partir dos resíduos.
+    
+  \item Utilize um modelo ARIMA (se possível) para projetar os três próximos anos na série anual e os 6 próximos meses na série mensal. Faça uma análise da consistência das intervalos de predição a partir dos resíduos.
+    
+  \item Compare as estimativas dos diferentes modelos e diga qual é o modelo mais adequado.
+  
+\end{enumerate}

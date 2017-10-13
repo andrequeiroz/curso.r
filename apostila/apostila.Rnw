@@ -1,0 +1,54 @@
+\documentclass[a4paper, 12pt, oneside]{report}
+\usepackage[left = 2.5cm, top = 2.5cm, right = 2.5cm, bottom = 2.5cm]{geometry}
+\usepackage[brazilian]{babel}
+\usepackage[hidelinks]{hyperref}
+\usepackage{icomma}
+
+\usepackage{fontspec}
+\setmainfont{Didact Gothic}
+
+\usepackage{indentfirst}
+\usepackage[onehalfspacing]{setspace}
+\setlength{\parindent}{1.2cm}
+
+\renewenvironment{knitrout}{\begin{singlespace}}{\end{singlespace}}
+
+\usepackage{tabularx}
+\usepackage[table]{xcolor}
+
+\author{André Silva de Queiroz}
+\title{R}
+\date{}
+
+<<setup, include = FALSE>>=
+library(knitr)
+
+knit_theme$set("print")
+opts_chunk$set(prompt = TRUE, comment = NA, background = "#F7F7F7",
+               fig.align = "center", fig.width = 5, fig.height = 3.2,
+               crop = TRUE, dev = "pdf", dev.args = list(pointsize = 10))
+knit_hooks$set(crop = hook_pdfcrop)
+options(OutDec = ",")
+
+numero <- function(objeto, digitos = 0)
+  format(objeto, big.mark = ".", decimal.mark = ",", scientific = FALSE,
+         nsmall = digitos, digits = digitos)
+@
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+
+\rowcolors{2}{gray!25}{white}
+
+<<capitulos, child = paste("./partes", list.files("./partes", pattern = "^[0-9]"), sep = "/")>>=
+@
+
+\clearpage
+\addcontentsline{toc}{chapter}{Referências Bibliográficas}
+\nocite{art-r, r-book, fpp}
+\bibliographystyle{plain}
+\bibliography{referencias}
+
+\end{document}

@@ -1,0 +1,132 @@
+\chapter*{Respostas}
+\addcontentsline{toc}{chapter}{Respostas}
+
+\section*{Capítulo 1}
+
+\begin{enumerate}
+  
+\item
+<<ex1.1, eval = FALSE, prompt = FALSE>>=
+dados.texto <- read.table(file = file.choose(), header = TRUE,
+                          sep = "\t")
+@
+
+\item
+<<ex1.2, eval = FALSE, prompt = FALSE>>=
+dados.csv <- read.table(file = file.choose(), header = FALSE,
+                        sep = ";")
+@ 
+
+\item
+<<ex1.3, eval = FALSE, prompt = FALSE>>=
+nrow(dados.texto)
+nrow(dados.csv)
+@
+
+\item
+<<ex1.4, eval = FALSE, prompt = FALSE>>=
+summary(dados.texto)
+@ 
+
+\item
+<<ex1.5, eval = FALSE, prompt = FALSE>>=
+mean(dados.texto$idade)
+median(dados.texto$idade)
+sd(dados.texto$idade)
+@ 
+
+\item
+<<ex1.6, eval = FALSE, prompt = FALSE>>=
+prop.table(table(dados.texto$vinculo, dados.texto$ambiente))
+@ 
+
+\item 
+<<ex1.7, eval = FALSE, prompt = FALSE>>=
+# ordenação das variáveis categoricas
+dados.texto$estacionamento <- factor(dados.texto$estacionamento,
+        levels = c("Ruim", "Regular", "Bom", "Ótimo"), ordered = TRUE)
+
+dados.texto$instalacoes <- factor(dados.texto$instalacoes,
+       levels = c("Ruim", "Regular", "Bom", "Ótimo"), ordered = TRUE)
+
+dados.texto$ambiente <- factor(dados.texto$ambiente,
+       levels = c("Ruim", "Regular", "Bom", "Ótimo"), ordered = TRUE)
+
+# criação da variável "is" (escala 1 a 4)
+dados.texto <- transform(dados.texto, is =
+                          (as.numeric(dados.texto$estacionamento) +
+                           as.numeric(dados.texto$instalacoes) +
+                           as.numeric(dados.texto$ambiente)) / 3)
+
+# transformação da escala de "is" para (0, 1)
+dados.texto <- transform(dados.texto, is = (is - 1) / 3)
+@ 
+
+\item
+<<ex1.8, eval = FALSE, prompt = FALSE>>=
+aggregate(x = list(is = dados.texto$is),
+          by = list(vinculo = dados.texto$vinculo), FUN = mean)
+@
+
+\item
+<<ex1.9, eval = FALSE, prompt = FALSE>>=
+barplot(table(dados.texto$estacionamento))
+@ 
+
+\item
+<<ex1.10, eval = FALSE, prompt = FALSE>>=
+barplot(table(dados.texto$vinculo, dados.texto$estacionamento),
+              beside = TRUE, legend = TRUE)
+@
+
+\item
+<<ex1.11, eval = FALSE, prompt = FALSE>>=
+hist(dados.texto$idade)
+@
+
+\item
+<<ex1.12, eval = FALSE, prompt = FALSE>>=
+est <- subset(dados.texto, vinculo == "Estagiário")
+hist(est$idade, breaks = 4, col = "lightblue")
+@
+
+\end{enumerate}
+
+\newpage
+\section*{Capítulo 2}
+
+\begin{enumerate}
+  
+\item
+<<ex2.1, eval = FALSE, prompt = FALSE>>=
+dados <- read.table(file = file.choose(), header = TRUE, sep = "\t")
+@
+
+\item
+<<ex2.2, eval = FALSE, prompt = FALSE>>=
+recebidos <- subset(dados, trt == 10)
+@
+
+\item
+<<ex2.3, eval = FALSE, prompt = FALSE>>=
+recebidos.mes <- ts(recebidos$recebidos, start = 2004, frequency = 12)
+@
+
+\item
+<<ex2.4, eval = FALSE, prompt = FALSE>>=
+recebidos.ano <- aggregate(list(recebidos = recebidos$recebidos),
+                           list(ano = recebidos$ano), sum)
+recebidos.ano <- ts(recebidos$recebidos, start = 2004, frequency = 1)
+@
+
+\item Tal qual texto.
+  
+\item Tal qual texto.
+  
+\item Tal qual texto.
+  
+\item Tal qual texto.
+  
+\item Tal qual texto.
+
+\end{enumerate}
