@@ -2,7 +2,7 @@
 
 <<c-2, include = FALSE>>=
 library(forecast)
-dados <- read.table(file = "../../arquivos/aula_2/recebidos_tst.txt",
+dados <- read.table(file = "../../arquivos/cap2/recebidos_tst.txt",
                     header = TRUE, sep = "\t")
 @
 

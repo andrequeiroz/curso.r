@@ -36,19 +36,19 @@ gerar_base <- function(n) {
                        estacionamento = estacionamento,
                        instalacoes = instalacoes, ambiente = ambiente)
 
-    ##write.table(x = base, file = "../../arquivos/aula_1/base.txt",
+    ##write.table(x = base, file = "../../arquivos/cap1/base.txt",
     ##            quote = FALSE, sep = "\t", row.names = FALSE)
 
     base <- data.frame(id = id, sexo = sexo, idade = idade, vinculo = vinculo,
                        estacionamento = estacionamento,
                        instalacoes = instalacoes, ambiente = ambiente)
 
-    ##xlsx::write.xlsx(x = base, file = "../../arquivos/aula_1/base.xlsx",
+    ##xlsx::write.xlsx(x = base, file = "../../arquivos/cap1/base.xlsx",
     ##                 sheetName = "dados", row.names = FALSE)
 }
 
 gerar_base(384)
-dados <- read.table("../../arquivos/aula_1/base.txt", header = TRUE, sep = "\t")
+dados <- read.table("../../arquivos/cap1/base.txt", header = TRUE, sep = "\t")
 @
 
 \section{Leitura dos dados no R}
